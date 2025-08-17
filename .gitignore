@@ -1,5 +1,5 @@
 # Environment files with sensitive data
-srcs/.env
+# srcs/.env
 
 # Secret files
 secrets/
