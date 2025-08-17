@@ -19,11 +19,15 @@ chown -R www-data:www-data /var/www/wordpress
 # Download WordPress if not exists
 if [ ! -f wp-config.php ]; then
     echo "Downloading WordPress..."
-    wp core download --allow-root
+    # Set higher memory limit for wp-cli
+    export PHP_MEMORY_LIMIT=512M
+    
+    # Download WordPress with higher memory limit
+    php -d memory_limit=512M /usr/local/bin/wp core download --allow-root
 
     echo "Creating wp-config.php..."
     # Create wp-config.php
-    wp config create \
+    php -d memory_limit=512M /usr/local/bin/wp config create \
         --dbname=${MYSQL_DATABASE} \
         --dbuser=${MYSQL_USER} \
         --dbpass=${MYSQL_PASSWORD} \
@@ -32,7 +36,7 @@ if [ ! -f wp-config.php ]; then
 
     echo "Installing WordPress..."
     # Install WordPress
-    wp core install \
+    php -d memory_limit=512M /usr/local/bin/wp core install \
         --url=https://${DOMAIN_NAME} \
         --title="Inception WordPress" \
         --admin_user=${WP_ADMIN_USER} \
@@ -42,7 +46,7 @@ if [ ! -f wp-config.php ]; then
 
     echo "Creating additional user..."
     # Create additional user
-    wp user create \
+    php -d memory_limit=512M /usr/local/bin/wp user create \
         ${WP_USER} \
         ${WP_USER_EMAIL} \
         --user_pass=${WP_USER_PASSWORD} \
@@ -57,4 +61,4 @@ chown -R www-data:www-data /var/www/wordpress
 # Start PHP-FPM
 echo "Starting PHP-FPM..."
 mkdir -p /run/php
-exec php-fpm7.4 -F
+exec php-fpm82 -F

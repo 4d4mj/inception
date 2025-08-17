@@ -2,7 +2,8 @@ FROM alpine:3.18
 
 RUN apk update && apk add --no-cache \
     nginx \
-    openssl
+    openssl \
+    bash
 
 COPY conf/nginx.conf /etc/nginx/nginx.conf
 COPY tools/setup_ssl.sh /usr/local/bin/
