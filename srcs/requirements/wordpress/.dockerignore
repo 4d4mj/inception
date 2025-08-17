@@ -1,0 +1,6 @@
+# WordPress specific variables
+*~
+*.log
+*.tmp
+.DS_Store
+wp-config-sample.php

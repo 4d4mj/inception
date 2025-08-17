@@ -1,0 +1,5 @@
+# NGINX specific variables
+*~
+*.log
+*.tmp
+.DS_Store
