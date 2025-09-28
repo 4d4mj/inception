@@ -3,6 +3,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+ORIG_PWD="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -30,15 +33,13 @@ Usage: ./vm_setup.sh [options]
 Options:
   --login USERNAME         System user that owns the project (defaults to current user)
   --domain DOMAIN          Fully qualified domain (defaults to <login>.42.fr)
-  --repo URL               Git repository to clone (defaults to project remote)
-  --project-dir NAME       Directory name for the project clone (defaults to inception)
+  --project-dir PATH       Path to the already cloned project (defaults to script directory)
   --data-root PATH         Host directory for Docker volumes (defaults to /home/<login>/data)
   --auto-up                Run 'make up' automatically when Docker access is available
   -h, --help               Show this help message and exit
 
 Environment overrides:
-  INCEPTION_LOGIN, INCEPTION_DOMAIN, INCEPTION_REPO_URL,
-  INCEPTION_PROJECT_NAME, INCEPTION_DATA_ROOT
+  INCEPTION_LOGIN, INCEPTION_DOMAIN, INCEPTION_PROJECT_PATH, INCEPTION_DATA_ROOT
 
 Secrets can be provided via:
   INCEPTION_DB_ROOT_PASSWORD, INCEPTION_DB_PASSWORD,
@@ -70,21 +71,17 @@ require_sudo() {
     sudo -v
 }
 
-DEFAULT_REPO_URL="https://github.com/Hicham1S/inception.git"
-DEFAULT_PROJECT_NAME="inception"
 DEFAULT_LOGIN="${INCEPTION_LOGIN:-${SUDO_USER:-$(id -un)}}"
 
 LOGIN="$DEFAULT_LOGIN"
 DOMAIN="${INCEPTION_DOMAIN:-}"
-PROJECT_NAME="${INCEPTION_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
-REPO_URL="${INCEPTION_REPO_URL:-$DEFAULT_REPO_URL}"
+PROJECT_PATH="${INCEPTION_PROJECT_PATH:-$SCRIPT_DIR}"
 DATA_ROOT="${INCEPTION_DATA_ROOT:-}"
 AUTO_UP=false
 ADDED_TO_DOCKER_GROUP=false
 ADDED_HOSTS_ENTRY=false
 
 LOGIN_HOME=""
-PROJECT_PATH=""
 ENV_FILE=""
 DOCKER_COMPOSE_FILE=""
 SECRETS_DIR=""
@@ -121,22 +118,13 @@ parse_args() {
                 DOMAIN="$2"
                 shift 2
                 ;;
-            --repo)
-                if [[ $# -lt 2 ]]; then
-                    print_error "Missing value for --repo"
-                    usage
-                    exit 1
-                fi
-                REPO_URL="$2"
-                shift 2
-                ;;
             --project-dir)
                 if [[ $# -lt 2 ]]; then
                     print_error "Missing value for --project-dir"
                     usage
                     exit 1
                 fi
-                PROJECT_NAME="$2"
+                PROJECT_PATH="$2"
                 shift 2
                 ;;
             --data-root)
@@ -180,15 +168,24 @@ finalize_paths() {
         DATA_ROOT="${LOGIN_HOME}/data"
     fi
 
-    PROJECT_PATH="${LOGIN_HOME}/${PROJECT_NAME}"
+    local candidate="$PROJECT_PATH"
+    if [[ "$candidate" != /* ]]; then
+        if [[ -d "${ORIG_PWD}/${candidate}" ]]; then
+            candidate="${ORIG_PWD}/${candidate}"
+        else
+            candidate="${LOGIN_HOME}/${candidate}"
+        fi
+    fi
+
+    if [[ ! -d "$candidate" ]]; then
+        print_error "Project directory '${PROJECT_PATH}' does not exist."
+        exit 1
+    fi
+
+    PROJECT_PATH="$(cd "$candidate" && pwd)"
     ENV_FILE="${PROJECT_PATH}/srcs/.env"
     DOCKER_COMPOSE_FILE="${PROJECT_PATH}/srcs/docker-compose.yml"
     SECRETS_DIR="${PROJECT_PATH}/secrets"
-
-    if [[ -z "$REPO_URL" ]]; then
-        print_error "A repository URL must be provided via --repo or INCEPTION_REPO_URL."
-        exit 1
-    fi
 }
 
 install_base_packages() {
@@ -253,20 +250,6 @@ ensure_hosts_entry() {
         print_status "Adding ${DOMAIN} to /etc/hosts..."
         echo "127.0.0.1 ${DOMAIN}" | sudo tee -a /etc/hosts >/dev/null
         ADDED_HOSTS_ENTRY=true
-    fi
-}
-
-clone_or_update_project() {
-    if [[ -d "${PROJECT_PATH}/.git" ]]; then
-        print_status "Updating existing project at ${PROJECT_PATH}..."
-        git -C "$PROJECT_PATH" fetch --prune
-        git -C "$PROJECT_PATH" pull --ff-only
-    elif [[ -d "$PROJECT_PATH" ]]; then
-        print_error "${PROJECT_PATH} exists but is not a git repository. Remove it or choose a different --project-dir."
-        exit 1
-    else
-        print_status "Cloning project from ${REPO_URL}..."
-        git clone "$REPO_URL" "$PROJECT_PATH"
     fi
 }
 
@@ -426,7 +409,6 @@ main() {
     ensure_docker_group_membership
     create_data_directories
     ensure_hosts_entry
-    clone_or_update_project
     configure_project_files
     ensure_secrets
     set_script_permissions

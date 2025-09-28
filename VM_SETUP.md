@@ -12,13 +12,14 @@ Your project is now properly configured with:
 ## Quick Setup (Automated)
 
 ### Option 1: Use the Automated Script
-1. Copy `vm_setup.sh` to your fresh VM
-2. Edit the GitHub URL in the script (line with `REPO_URL=`)
+1. Transfer this repository (including `vm_setup.sh`) to your fresh VM (`git clone` or `scp` are both fine).
+2. On the VM, change into the project directory (the script defaults to the directory it lives in).
 3. Run the script:
-```bash
-chmod +x vm_setup.sh
-./vm_setup.sh
-```
+   ```bash
+   chmod +x vm_setup.sh
+   ./vm_setup.sh --auto-up   # optional flag runs `make up` if Docker is ready
+   ```
+4. If you keep the code somewhere else, pass `--project-dir /path/to/inception` so the script knows where to operate.
 
 ### Option 2: Manual Setup Steps
 
@@ -59,7 +60,7 @@ sudo chown -R ajabado:ajabado /home/ajabado/data/
 echo "127.0.0.1 ajabado.42.fr" | sudo tee -a /etc/hosts
 ```
 
-### 4. Clone Project from GitHub
+### 4. Clone Project from GitHub (if you haven't already)
 ```bash
 cd /home/ajabado/
 git clone YOUR_GITHUB_URL inception
