@@ -2,9 +2,11 @@
 FROM debian:bookworm
 
 # Step 2: Install application dependencies
-RUN apt-get update && \
-    apt-get install -y mariadb-server && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mariadb-server mariadb-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/mysqld \
+    && chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
 # Step 3: Copy in any relevant configuration files
 COPY ./tools/init.sh /usr/local/bin/init.sh
