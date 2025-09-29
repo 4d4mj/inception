@@ -13,12 +13,14 @@ until mysqladmin ping -h localhost --silent; do
     sleep 2
 done
 
-# Check if this is the first run (no root password set yet)
-if mysql -u root -e "SELECT 1" > /dev/null 2>&1; then
+# Check if database has been initialized by looking for our custom database
+if ! mysql -u root -p$MYSQL_ROOT_PASSWORD -e "USE $MYSQL_DATABASE;" > /dev/null 2>&1; then
     echo "First time setup - configuring MariaDB..."
-    # First run - no password set yet
+    # First run - set root password and create database
     mysql -u root <<EOF
 SET PASSWORD FOR 'root'@'localhost' = PASSWORD('$MYSQL_ROOT_PASSWORD');
+SET PASSWORD FOR 'root'@'127.0.0.1' = PASSWORD('$MYSQL_ROOT_PASSWORD');
+SET PASSWORD FOR 'root'@'::1' = PASSWORD('$MYSQL_ROOT_PASSWORD');
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
