@@ -1,14 +1,10 @@
-# Secrets directory - never commit passwords
 secrets/
 
-# Environment files (if they contain sensitive data)
 srcs/.env.local
 srcs/.env.production
 
-# Docker volumes data
 data/
 
-# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -17,11 +13,9 @@ data/
 ehthumbs.db
 Thumbs.db
 
-# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Logs
 *.log
